@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -29,6 +31,7 @@ import android.os.Vibrator;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.SeekBar;
@@ -44,12 +47,11 @@ import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 
-
-
 public class MainActivity extends Activity implements ConnectionCallbacks,
     OnConnectionFailedListener, LocationListener {
   private static final long UPDATE_INTERVAL = 1000;
   private static final long FASTEST_INTERVAL = 1000;
+  protected static final int MAX_NEAREST_USER_DISTANZ = 2500;
   TextView tvUser, tvSearchRadius;
   EditText etName, etWhitelistedName;
   SeekBar sbMaxDistance;
@@ -59,13 +61,14 @@ public class MainActivity extends Activity implements ConnectionCallbacks,
   private Location mCurrentLocation;
   LocationRequest mLocationRequest;
   Vibrator vibrator;
-
+  ProgressBar pgbNextFetch;
   private Handler handler = new Handler();
   private Thread thread;
 
 
   private LocationManager locationManager;
   private String provider;
+  String userName = "";
   private double distance = 0;
   private String nearestUser = "";
   private String nearestUserGender = "";
@@ -73,12 +76,15 @@ public class MainActivity extends Activity implements ConnectionCallbacks,
   private double nearestUserDistance = 0;
   private Gender myGender = Gender.Male;
   private Gender targetGender = Gender.Both;
-  private double maxDistance;
+  private double maxDistance = 500;
   NotificationCompat.Builder mBuilder;
   // Sets an ID for the notification
   int mNotificationId = 001;
   // Gets an instance of the NotificationManager service
   NotificationManager mNotifyMgr;
+
+
+  private Long waitinterval = 10000l;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -86,7 +92,7 @@ public class MainActivity extends Activity implements ConnectionCallbacks,
     setContentView(R.layout.activity_main);
     vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
 
-
+    pgbNextFetch = (ProgressBar) findViewById(R.id.pgbNextFetch);
     etName = (EditText) findViewById(R.id.etName);
     tvSearchRadius = (TextView) findViewById(R.id.tvSearchRadius);
     tvUser = (TextView) findViewById(R.id.tvUser);
@@ -191,16 +197,19 @@ public class MainActivity extends Activity implements ConnectionCallbacks,
         tvSearchRadius.setText("Search Radius: " + maxDistance);
       }
     });
+
+
+    t.scheduleAtFixedRate(task, 0, 1000);
   }
+
 
   private Thread getThread() {
     return new Thread(new Runnable() {
-      private Long waitinterval = 10000l;
-
       @Override
       public void run() {
         if (mCurrentLocation != null) {
-          if (nearestUserDistance >= 2500) {
+          if (nearestUserDistance >= MAX_NEAREST_USER_DISTANZ || maxDistance == 0
+              || userName.equals("")) {
             waitinterval = 30000l;
           } else {
             waitinterval = 6000l;
@@ -220,9 +229,32 @@ public class MainActivity extends Activity implements ConnectionCallbacks,
           Toast.makeText(getBaseContext(), "Please enable GPS and Internet and fill in a name",
               Toast.LENGTH_SHORT).show();
         }
+        loadProgressBar(waitinterval.intValue() / 1000);
+        System.out.println("halölo: " + waitinterval);
         handler.postDelayed(this, waitinterval);
       }
     });
+  }
+
+  int elapsedTime = 0;
+  Timer t = new Timer();
+  TimerTask task = new TimerTask() {
+
+    @Override
+    public void run() {
+      if (elapsedTime * 1000 <= waitinterval) {
+        pgbNextFetch.incrementProgressBy(1);
+        elapsedTime++;
+      }
+    }
+  };
+
+
+
+  private void loadProgressBar(final int waitInterval) {
+    elapsedTime = 0;
+    pgbNextFetch.setMax(waitInterval);
+    pgbNextFetch.setProgress(0);
   }
 
   public String contactServer(String host, String... data) {
@@ -236,15 +268,18 @@ public class MainActivity extends Activity implements ConnectionCallbacks,
       String longitude = data[1];
       String userID = UniqueID.getDeviceId(getBaseContext());
       if (etName.getText().toString().isEmpty()) {
+        userName = "";
         return "Fill in a name.";
       }
-      String userName = etName.getText().toString();
+      userName = etName.getText().toString();
       String whitelistedName = "";
       if (!etWhitelistedName.getText().toString().isEmpty()) {
         whitelistedName = etWhitelistedName.getText().toString();
       }
       maxDistance = sbMaxDistance.getProgress();
-
+      if (maxDistance == 0) {
+        return "";
+      }
 
       jsonObject.accumulate("userID", userID);
       jsonObject.accumulate("latitude", latitude);
@@ -288,7 +323,7 @@ public class MainActivity extends Activity implements ConnectionCallbacks,
                               + nearestUserGender + "]");
               // Builds the notification and issues it.
               mNotifyMgr.notify(mNotificationId, mBuilder.build());
-              vibrator.vibrate(800);
+              vibrator.vibrate(1000);
             }
           });
         }
@@ -306,6 +341,7 @@ public class MainActivity extends Activity implements ConnectionCallbacks,
           public void run() {
             tvUser.setText("Nearest User: No User found");
             nearestuserID = "";
+            nearestUserDistance = MAX_NEAREST_USER_DISTANZ + 1;
           }
         });
       }
