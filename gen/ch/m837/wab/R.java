@@ -462,6 +462,7 @@ containing a value of this type.
     }
     public static final class menu {
         public static final int main=0x7f090000;
+        public static final int settings=0x7f090001;
     }
     public static final class string {
         public static final int accept=0x7f050002;
@@ -575,6 +576,7 @@ containing a value of this type.
         public static final int store_picture_message=0x7f050001;
         public static final int store_picture_title=0x7f050000;
         public static final int title_activity_main=0x7f050027;
+        public static final int title_activity_setting=0x7f05002a;
         public static final int title_activity_settings=0x7f050028;
         /**  Text on a placeholder buy button when Google Play services is not
          available or up-to-date 

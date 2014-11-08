@@ -139,6 +139,7 @@ int integer google_play_services_version 0x7f070000
 int layout activity_main 0x7f030000
 int layout activity_settings 0x7f030001
 int menu main 0x7f090000
+int menu settings 0x7f090001
 int string accept 0x7f050002
 int string action_settings 0x7f050026
 int string app_name 0x7f050023
@@ -179,6 +180,7 @@ int string hello_world 0x7f050029
 int string store_picture_message 0x7f050001
 int string store_picture_title 0x7f050000
 int string title_activity_main 0x7f050027
+int string title_activity_setting 0x7f05002a
 int string title_activity_settings 0x7f050028
 int string wallet_buy_button_place_holder 0x7f050022
 int style AppBaseTheme 0x7f040005
