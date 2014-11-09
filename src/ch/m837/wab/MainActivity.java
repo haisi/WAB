@@ -14,7 +14,10 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.json.JSONObject;
 
+import android.app.ActionBar;
+import android.app.ActionBar.TabListener;
 import android.app.Activity;
+import android.app.FragmentTransaction;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.location.Criteria;
@@ -28,16 +31,26 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.StrictMode;
 import android.os.Vibrator;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentActivity;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.app.NotificationCompat;
+import android.support.v4.view.ViewPager;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ProgressBar;
-import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import ch.m837.wab.model.Gender;
+import ch.m837.wab.model.User;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -47,63 +60,102 @@ import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 
-public class MainActivity extends Activity implements ConnectionCallbacks,
-    OnConnectionFailedListener, LocationListener {
-  private static final long UPDATE_INTERVAL = 1000;
-  private static final long FASTEST_INTERVAL = 1000;
-  protected static final int MAX_NEAREST_USER_DISTANZ = 2500;
-  TextView tvUser, tvSearchRadius;
-  EditText etName, etWhitelistedName;
-  SeekBar sbMaxDistance;
-  RadioButton radio0Male, radio1Female, radio2Male, radio3Female, radio4Both;
-  RadioGroup radioGroup1, radioGroup2;
+public class MainActivity extends FragmentActivity implements ConnectionCallbacks,
+    OnConnectionFailedListener, LocationListener, TabListener {
+
+
+  /**
+   * The {@link android.support.v4.view.PagerAdapter} that will provide fragments for each of the
+   * three primary sections of the app. We use a {@link android.support.v4.app.FragmentPagerAdapter}
+   * derivative, which will keep every loaded fragment in memory. If this becomes too memory
+   * intensive, it may be best to switch to a
+   * {@link android.support.v4.app.FragmentStatePagerAdapter}.
+   */
+  AppSectionsPagerAdapter mAppSectionsPagerAdapter;
+
+  /**
+   * The {@link ViewPager} that will display the three primary sections of the app, one at a time.
+   */
+  ViewPager mViewPager;
+
+
+
+  private WABApp wab = WABApp.getInstance();
+  private static TextView tvUser;
+  private static ProgressBar pgbNextFetch;
+
   private GoogleApiClient mLocationClient;
   private Location mCurrentLocation;
-  LocationRequest mLocationRequest;
-  Vibrator vibrator;
-  ProgressBar pgbNextFetch;
+  private LocationRequest mLocationRequest;
+  private Vibrator vibrator;
+
   private Handler handler = new Handler();
   private Thread thread;
 
 
   private LocationManager locationManager;
   private String provider;
-  String userName = "";
-  private double distance = 0;
-  private String nearestUser = "";
-  private String nearestUserGender = "";
-  private String nearestuserID = "";
-  private double nearestUserDistance = 0;
-  private Gender myGender = Gender.Male;
-  private Gender targetGender = Gender.Both;
-  private double maxDistance = 500;
-  NotificationCompat.Builder mBuilder;
+
+  private NotificationCompat.Builder mBuilder;
   // Sets an ID for the notification
-  int mNotificationId = 001;
+  private int mNotificationId = 001;
   // Gets an instance of the NotificationManager service
-  NotificationManager mNotifyMgr;
+  private NotificationManager mNotifyMgr;
 
 
-  private Long waitinterval = 10000l;
+  private static Long waitinterval = 10000l;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
+
+
+    // FRAGMENTS
+    // Create the adapter that will return a fragment for each of the three primary sections
+    // of the app.
+    mAppSectionsPagerAdapter = new AppSectionsPagerAdapter(getSupportFragmentManager());
+
+    // Set up the action bar.
+    final ActionBar actionBar = getActionBar();
+
+    // Specify that the Home/Up button should not be enabled, since there is no hierarchical
+    // parent.
+    actionBar.setHomeButtonEnabled(false);
+
+    // Specify that we will be displaying tabs in the action bar.
+    actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_TABS);
+
+    // Set up the ViewPager, attaching the adapter and setting up a listener for when the
+    // user swipes between sections.
+    mViewPager = (ViewPager) findViewById(R.id.pager);
+    mViewPager.setAdapter(mAppSectionsPagerAdapter);
+    mViewPager.setOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener() {
+      @Override
+      public void onPageSelected(int position) {
+        // When swiping between different app sections, select the corresponding tab.
+        // We can also use ActionBar.Tab#select() to do this if we have a reference to the
+        // Tab.
+        actionBar.setSelectedNavigationItem(position);
+      }
+    });
+
+    // For each of the sections in the app, add a tab to the action bar.
+    for (int i = 0; i < mAppSectionsPagerAdapter.getCount(); i++) {
+      // Create a tab with text corresponding to the page title defined by the adapter.
+      // Also specify this Activity object, which implements the TabListener interface, as the
+      // listener for when this tab is selected.
+      actionBar.addTab(actionBar.newTab().setText(mAppSectionsPagerAdapter.getPageTitle(i))
+          .setTabListener(this));
+    }
+    actionBar.selectTab(actionBar.getTabAt(1));
+
+    // WAB
+    wab.getLocaluser().setUserID(UniqueID.getDeviceId(getApplicationContext()));
     vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
-
-    pgbNextFetch = (ProgressBar) findViewById(R.id.pgbNextFetch);
-    etName = (EditText) findViewById(R.id.etName);
-    tvSearchRadius = (TextView) findViewById(R.id.tvSearchRadius);
-    tvUser = (TextView) findViewById(R.id.tvUser);
-    radioGroup1 = (RadioGroup) findViewById(R.id.radioGroup1);
-    radioGroup2 = (RadioGroup) findViewById(R.id.radioGroup2);
-    sbMaxDistance = (SeekBar) findViewById(R.id.sbMaxDistance);
-    etWhitelistedName = (EditText) findViewById(R.id.etWhitelistedName);
-
     // check if you are connected or not
     if (!isConnected()) {
-      Toast.makeText(this, "You are not connected!", Toast.LENGTH_LONG).show();
+      Toast.makeText(getApplicationContext(), "You are not connected!", Toast.LENGTH_LONG).show();
     }
     mNotifyMgr = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
 
@@ -135,81 +187,36 @@ public class MainActivity extends Activity implements ConnectionCallbacks,
               .addConnectionCallbacks(this).addOnConnectionFailedListener(this).build();
 
       mLocationRequest = new LocationRequest();
-      mLocationRequest.setInterval(UPDATE_INTERVAL);
+      mLocationRequest.setInterval(WABApp.UPDATE_INTERVAL);
       mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
-      mLocationRequest.setFastestInterval(FASTEST_INTERVAL);
+      mLocationRequest.setFastestInterval(WABApp.FASTEST_INTERVAL);
+      mCurrentLocation = LocationServices.FusedLocationApi.getLastLocation(mLocationClient);
     }
 
+    handler.removeCallbacksAndMessages(null);
     thread = getThread();
+    handler.postDelayed(thread, 2000);// WORKAROUND delayed that the view can load, before the
+                                      // thread gets executed(because of the progressbar)
+    if (android.os.Build.VERSION.SDK_INT < 17) {
 
-    radioGroup1.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
-      @Override
-      public void onCheckedChanged(RadioGroup group, int checkedId) {
-
-        switch (checkedId) {
-          case R.id.radio0Male:
-            myGender = Gender.Male;
-            break;
-          case R.id.radio1Female:
-            myGender = Gender.Female;
-            break;
-        }
-      }
-    });
-
-    radioGroup2.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
-      @Override
-      public void onCheckedChanged(RadioGroup group, int checkedId) {
-        switch (checkedId) {
-          case R.id.radio2Male:
-            targetGender = Gender.Male;
-            break;
-          case R.id.radio3Female:
-            targetGender = Gender.Female;
-            break;
-          case R.id.radio4Both:
-            targetGender = Gender.Both;
-            break;
-        }
-      }
-
-    });
+    } else {
+      mLocationClient.connect();
+    }
 
 
-    sbMaxDistance.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-
-      @Override
-      public void onStopTrackingTouch(SeekBar seekBar) {
-        // TODO Auto-generated method stub
-
-      }
-
-      @Override
-      public void onStartTrackingTouch(SeekBar seekBar) {
-        // TODO Auto-generated method stub
-
-      }
-
-      @Override
-      public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-        maxDistance = progress;
-        tvSearchRadius.setText("Search Radius: " + maxDistance);
-      }
-    });
-
-
-    t.scheduleAtFixedRate(task, 0, 1000);
   }
 
+  static boolean alreadyAlerted = false;
 
   private Thread getThread() {
     return new Thread(new Runnable() {
       @Override
       public void run() {
         if (mCurrentLocation != null) {
-          if (nearestUserDistance >= MAX_NEAREST_USER_DISTANZ || maxDistance == 0
-              || userName.equals("")) {
+          if (wab.getConnectedUser().getDistanceToNearestUser() >= WABApp.MAX_NEAREST_USER_DISTANZ
+              || wab.getLocaluser().getMaxSearchRadius() == 0
+              || wab.getLocaluser().getUserName().equals("")) {
             waitinterval = 30000l;
           } else {
             waitinterval = 6000l;
@@ -226,19 +233,22 @@ public class MainActivity extends Activity implements ConnectionCallbacks,
             System.err.println(e);
           }
         } else {
-          Toast.makeText(getBaseContext(), "Please enable GPS and Internet and fill in a name",
-              Toast.LENGTH_SHORT).show();
+          LocationManagerChecker locationManagerChecker =
+              new LocationManagerChecker(getApplicationContext());
+          if (!locationManagerChecker.isLocationServiceAvailable() && !alreadyAlerted) {
+            locationManagerChecker.createLocationServiceError(MainActivity.this);
+            MainActivity.alreadyAlerted = true;
+          }
         }
         loadProgressBar(waitinterval.intValue() / 1000);
-        System.out.println("halölo: " + waitinterval);
         handler.postDelayed(this, waitinterval);
       }
     });
   }
 
-  int elapsedTime = 0;
-  Timer t = new Timer();
-  TimerTask task = new TimerTask() {
+  static int elapsedTime = 0;
+  static Timer t = new Timer();
+  static TimerTask task = new TimerTask() {
 
     @Override
     public void run() {
@@ -248,8 +258,6 @@ public class MainActivity extends Activity implements ConnectionCallbacks,
       }
     }
   };
-
-
 
   private void loadProgressBar(final int waitInterval) {
     elapsedTime = 0;
@@ -264,31 +272,25 @@ public class MainActivity extends Activity implements ConnectionCallbacks,
       HttpClient httpclient = new DefaultHttpClient();
       JSONObject jsonObject = new JSONObject();
 
-      String latitude = data[0];
-      String longitude = data[1];
-      String userID = UniqueID.getDeviceId(getBaseContext());
-      if (etName.getText().toString().isEmpty()) {
-        userName = "";
+      wab.getLocaluser().setLatitude(Double.valueOf(data[0]));
+      wab.getLocaluser().setLongitude(Double.valueOf(data[1]));
+
+      if (wab.getLocaluser().getUserName().isEmpty()) {
         return "Fill in a name.";
       }
-      userName = etName.getText().toString();
-      String whitelistedName = "";
-      if (!etWhitelistedName.getText().toString().isEmpty()) {
-        whitelistedName = etWhitelistedName.getText().toString();
-      }
-      maxDistance = sbMaxDistance.getProgress();
-      if (maxDistance == 0) {
+
+      if (wab.getLocaluser().getMaxSearchRadius() == 0) {
         return "";
       }
 
-      jsonObject.accumulate("userID", userID);
-      jsonObject.accumulate("latitude", latitude);
-      jsonObject.accumulate("longitude", longitude);
-      jsonObject.accumulate("userName", userName);
-      jsonObject.accumulate("gender", myGender.toString());
-      jsonObject.accumulate("targetGender", targetGender.toString());
-      jsonObject.accumulate("maxDistance", maxDistance);
-      jsonObject.accumulate("whitelistedName", whitelistedName);
+      jsonObject.accumulate("userID", wab.getLocaluser().getUserID());
+      jsonObject.accumulate("latitude", wab.getLocaluser().getLatitude());
+      jsonObject.accumulate("longitude", wab.getLocaluser().getLongitude());
+      jsonObject.accumulate("userName", wab.getLocaluser().getUserName());
+      jsonObject.accumulate("gender", wab.getLocaluser().getGender().toString());
+      jsonObject.accumulate("targetGender", wab.getLocaluser().getGenderLookingFor().toString());
+      jsonObject.accumulate("maxSearchRadius", wab.getLocaluser().getMaxSearchRadius());
+      jsonObject.accumulate("whitelistedName", wab.getLocaluser().getWhiteListedName());
 
 
       String json = jsonObject.toString();
@@ -303,13 +305,19 @@ public class MainActivity extends Activity implements ConnectionCallbacks,
       if (result != null && !result.equals("{}")) {
         JSONObject answer = new JSONObject(result);
 
-        distance = answer.getDouble("distance");
-        nearestUser = answer.getString("userName");
-        nearestUserGender = answer.getString("gender");
-        nearestUserDistance = answer.getDouble("nearestUserDistance");
+        wab.getConnectedUser().setDistanceToNearestUser(answer.getDouble("distanceToNearestUser"));
+        wab.getConnectedUser().setUserName(answer.getString("userName"));
+        wab.getConnectedUser().setGender(Gender.valueOf(answer.getString("gender")));
+        wab.getConnectedUser().setGenderLookingFor(
+            Gender.valueOf(answer.getString("genderLookingFor")));
+        wab.getConnectedUser().setLatitude(Double.valueOf(answer.getString("latitude")));
+        wab.getConnectedUser().setLongitude(Double.valueOf(answer.getString("longitude")));
+        wab.getConnectedUser().setMaxSearchRadius(
+            Double.valueOf(answer.getString("maxSearchRadius")));
 
-        if (!nearestuserID.equals(answer.getString("userID"))) {
-          nearestuserID = answer.getString("userID");
+
+        if (!wab.getConnectedUser().getUserID().equals(answer.getString("userID"))) {
+          wab.getConnectedUser().setUserID(answer.getString("userID"));
           runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -319,8 +327,9 @@ public class MainActivity extends Activity implements ConnectionCallbacks,
                       .setSmallIcon(R.drawable.street_view)
                       .setContentTitle("WAB found a member nearby")
                       .setContentText(
-                          "Nearest User: " + nearestUser + " [" + (int) distance + "m]["
-                              + nearestUserGender + "]");
+                          "Nearest User: " + wab.getConnectedUser().getUserName() + " ["
+                              + (int) wab.getConnectedUser().getDistanceToNearestUser() + "m]["
+                              + wab.getConnectedUser().getGender() + "]");
               // Builds the notification and issues it.
               mNotifyMgr.notify(mNotificationId, mBuilder.build());
               vibrator.vibrate(1000);
@@ -330,8 +339,9 @@ public class MainActivity extends Activity implements ConnectionCallbacks,
         runOnUiThread(new Runnable() {
           @Override
           public void run() {
-            tvUser.setText("Nearest User: " + nearestUser + " [" + (int) distance + "m]["
-                + nearestUserGender + "]");
+            tvUser.setText("Nearest User: " + wab.getConnectedUser().getUserName() + " ["
+                + (int) wab.getConnectedUser().getDistanceToNearestUser() + "m]["
+                + wab.getConnectedUser().getGender() + "]");
           }
         });
       } else {
@@ -340,8 +350,7 @@ public class MainActivity extends Activity implements ConnectionCallbacks,
           @Override
           public void run() {
             tvUser.setText("Nearest User: No User found");
-            nearestuserID = "";
-            nearestUserDistance = MAX_NEAREST_USER_DISTANZ + 1;
+            wab.setConnectedUser(new User());
           }
         });
       }
@@ -355,10 +364,11 @@ public class MainActivity extends Activity implements ConnectionCallbacks,
     ConnectivityManager connMgr =
         (ConnectivityManager) getSystemService(Activity.CONNECTIVITY_SERVICE);
     NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
-    if (networkInfo != null && networkInfo.isConnected())
+    if (networkInfo != null && networkInfo.isConnected()) {
       return true;
-    else
+    } else {
       return false;
+    }
   }
 
   private class HttpAsyncTask extends AsyncTask<String, Void, String> {
@@ -407,32 +417,18 @@ public class MainActivity extends Activity implements ConnectionCallbacks,
 
   @Override
   public void onLocationChanged(Location location) {
-    Log.d("Location Update", "CHANGED");
     mCurrentLocation = location;
   }
 
   @Override
   protected void onStart() {
     super.onStart();
-    handler.removeCallbacksAndMessages(null);
-    thread = getThread();
-    handler.post(thread);
-    if (android.os.Build.VERSION.SDK_INT < 17) {
-
-    } else {
-      mLocationClient.connect();
-    }
   }
 
   @Override
   protected void onStop() {
     super.onStop();
-    if (android.os.Build.VERSION.SDK_INT < 17) {
 
-    } else {
-      LocationServices.FusedLocationApi.removeLocationUpdates(mLocationClient, this);
-      mLocationClient.disconnect();
-    }
   }
 
   @Override
@@ -453,5 +449,228 @@ public class MainActivity extends Activity implements ConnectionCallbacks,
   @Override
   protected void onDestroy() {
     super.onDestroy();
+    if (android.os.Build.VERSION.SDK_INT < 17) {
+
+    } else {
+      LocationServices.FusedLocationApi.removeLocationUpdates(mLocationClient, this);
+      mLocationClient.disconnect();
+    }
   }
+
+
+
+  // FRAGMENTS
+  @Override
+  public void onTabUnselected(ActionBar.Tab tab, FragmentTransaction fragmentTransaction) {}
+
+  @Override
+  public void onTabSelected(ActionBar.Tab tab, FragmentTransaction fragmentTransaction) {
+    // When the given tab is selected, switch to the corresponding page in the ViewPager.
+    mViewPager.setCurrentItem(tab.getPosition());
+  }
+
+  @Override
+  public void onTabReselected(ActionBar.Tab tab, FragmentTransaction fragmentTransaction) {}
+
+  /**
+   * A {@link FragmentPagerAdapter} that returns a fragment corresponding to one of the primary
+   * sections of the app.
+   */
+  public static class AppSectionsPagerAdapter extends FragmentPagerAdapter {
+
+    public AppSectionsPagerAdapter(FragmentManager fm) {
+      super(fm);
+    }
+
+    @Override
+    public Fragment getItem(int i) {
+      switch (i) {
+        case 1:
+          return new WABMainFragment();
+        case 0:
+          return new SettingsFragment();
+
+        default:
+          // The other sections of the app are dummy placeholders.
+          Fragment fragment = new DummySectionFragment();
+          Bundle args = new Bundle();
+          args.putInt(DummySectionFragment.ARG_SECTION_NUMBER, i + 1);
+          fragment.setArguments(args);
+          return fragment;
+      }
+    }
+
+    @Override
+    public int getCount() {
+      return 3;
+    }
+
+    @Override
+    public CharSequence getPageTitle(int position) {
+      switch (position) {
+        case 0:
+          return "Settings";
+        case 1:
+          return "WAB";
+        case 2:
+          return "Chat";
+      }
+      return "ERROR";
+    }
+  }
+
+  /**
+   * Main fragment WABMain
+   */
+  public static class WABMainFragment extends Fragment {
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+      View rootView = inflater.inflate(R.layout.fragment_section_main, container, false);
+      pgbNextFetch = (ProgressBar) rootView.findViewById(R.id.pgbNextFetch);
+      tvUser = (TextView) rootView.findViewById(R.id.tvUser);
+      t.scheduleAtFixedRate(task, 0, 1000);
+      return rootView;
+    }
+  }
+  /**
+   * Settings fragment SettingsFragment
+   */
+  public static class SettingsFragment extends Fragment {
+
+    private RadioGroup radioGroup1, radioGroup2;
+    private WABApp wab = WABApp.getInstance();
+    private SeekBar sbMaxDistance;
+    private TextView tvSearchRadius;
+    private EditText etName, etWhitelistedName;
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+      View rootView = inflater.inflate(R.layout.fragment_section_settings, container, false);
+
+
+
+      etWhitelistedName = (EditText) rootView.findViewById(R.id.etWhitelistedName);
+      radioGroup1 = (RadioGroup) rootView.findViewById(R.id.radioGroup1);
+      radioGroup2 = (RadioGroup) rootView.findViewById(R.id.radioGroup2);
+      sbMaxDistance = (SeekBar) rootView.findViewById(R.id.sbMaxDistance);
+      tvSearchRadius = (TextView) rootView.findViewById(R.id.tvSearchRadius);
+      etName = (EditText) rootView.findViewById(R.id.etName);
+
+
+
+      radioGroup1.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+        @Override
+        public void onCheckedChanged(RadioGroup group, int checkedId) {
+
+          switch (checkedId) {
+            case R.id.radio0Male:
+              wab.getLocaluser().setGender(Gender.Male);
+              break;
+            case R.id.radio1Female:
+              wab.getLocaluser().setGender(Gender.Female);
+              break;
+          }
+        }
+      });
+
+      radioGroup2.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+        @Override
+        public void onCheckedChanged(RadioGroup group, int checkedId) {
+          switch (checkedId) {
+            case R.id.radio2Male:
+              wab.getLocaluser().setGenderLookingFor(Gender.Male);
+              break;
+            case R.id.radio3Female:
+              wab.getLocaluser().setGenderLookingFor(Gender.Female);
+              break;
+            case R.id.radio4Both:
+              wab.getLocaluser().setGenderLookingFor(Gender.Both);
+              break;
+          }
+        }
+
+      });
+
+
+      sbMaxDistance.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+
+        @Override
+        public void onStopTrackingTouch(SeekBar seekBar) {
+          // TODO Auto-generated method stub
+        }
+
+        @Override
+        public void onStartTrackingTouch(SeekBar seekBar) {
+          // TODO Auto-generated method stub
+        }
+
+        @Override
+        public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+          wab.getLocaluser().setMaxSearchRadius(progress);
+          tvSearchRadius.setText("Search Radius: " + progress);
+        }
+      });
+
+      etName.addTextChangedListener(new TextWatcher() {
+
+        @Override
+        public void onTextChanged(CharSequence s, int start, int before, int count) {
+          // TODO Auto-generated method stub
+        }
+
+        @Override
+        public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+          // TODO Auto-generated method stub
+        }
+
+        @Override
+        public void afterTextChanged(Editable s) {
+          wab.getLocaluser().setUserName(s.toString());
+        }
+      });
+
+      etWhitelistedName.addTextChangedListener(new TextWatcher() {
+
+        @Override
+        public void onTextChanged(CharSequence s, int start, int before, int count) {
+          // TODO Auto-generated method stub
+        }
+
+        @Override
+        public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+          // TODO Auto-generated method stub
+        }
+
+        @Override
+        public void afterTextChanged(Editable s) {
+          wab.getLocaluser().setWhiteListedName(s.toString());
+        }
+      });
+
+      return rootView;
+    }
+  }
+  /**
+   * JUST AS AN EXAMPLE
+   * 
+   * A dummy fragment representing a section of the app, but that simply displays
+   * 
+   * 
+   * dummy text.
+   */
+  public static class DummySectionFragment extends Fragment {
+
+    public static final String ARG_SECTION_NUMBER = "section_number";
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+      View rootView = inflater.inflate(R.layout.fragment_section_dummy, container, false);
+      Bundle args = getArguments();
+      // ((TextView) rootView.findViewById(android.R.id.text1)).setText(getString(
+      // R.string.dummy_section_text, args.getInt(ARG_SECTION_NUMBER)));
+      return rootView;
+    }
+  }
+
 }

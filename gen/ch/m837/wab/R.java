@@ -410,7 +410,7 @@ containing a value of this type.
     }
     public static final class id {
         public static final int LinearLayout1=0x7f0a0015;
-        public static final int action_settings=0x7f0a002a;
+        public static final int action_settings=0x7f0a002b;
         public static final int book_now=0x7f0a000e;
         public static final int buyButton=0x7f0a000a;
         public static final int buy_now=0x7f0a000f;
@@ -427,7 +427,8 @@ containing a value of this type.
         public static final int monochrome=0x7f0a0013;
         public static final int none=0x7f0a0001;
         public static final int normal=0x7f0a0002;
-        public static final int pgbNextFetch=0x7f0a0014;
+        public static final int pager=0x7f0a0014;
+        public static final int pgbNextFetch=0x7f0a0028;
         public static final int production=0x7f0a0007;
         public static final int radio0Male=0x7f0a0020;
         public static final int radio1Female=0x7f0a0021;
@@ -444,13 +445,13 @@ containing a value of this type.
         public static final int terrain=0x7f0a0004;
         public static final int textView1=0x7f0a001d;
         public static final int textView2=0x7f0a001e;
-        public static final int textView3=0x7f0a0028;
+        public static final int textView3=0x7f0a0029;
         public static final int textView4=0x7f0a0018;
         public static final int textView5=0x7f0a001c;
         public static final int textView6=0x7f0a0026;
         public static final int tvName=0x7f0a0016;
         public static final int tvSearchRadius=0x7f0a001a;
-        public static final int tvUser=0x7f0a0029;
+        public static final int tvUser=0x7f0a002a;
         public static final int wrap_content=0x7f0a000d;
     }
     public static final class integer {
@@ -459,10 +460,14 @@ containing a value of this type.
     public static final class layout {
         public static final int activity_main=0x7f030000;
         public static final int activity_settings=0x7f030001;
+        public static final int fragment_section_dummy=0x7f030002;
+        public static final int fragment_section_main=0x7f030003;
+        public static final int fragment_section_settings=0x7f030004;
     }
     public static final class menu {
         public static final int main=0x7f090000;
         public static final int settings=0x7f090001;
+        public static final int wab=0x7f090002;
     }
     public static final class string {
         public static final int accept=0x7f050002;
@@ -578,6 +583,10 @@ containing a value of this type.
         public static final int title_activity_main=0x7f050027;
         public static final int title_activity_setting=0x7f05002a;
         public static final int title_activity_settings=0x7f050028;
+        public static final int title_activity_wab=0x7f05002b;
+        public static final int title_section1=0x7f05002c;
+        public static final int title_section2=0x7f05002d;
+        public static final int title_section3=0x7f05002e;
         /**  Text on a placeholder buy button when Google Play services is not
          available or up-to-date 
          */
