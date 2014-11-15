@@ -217,21 +217,12 @@ public class MainActivity extends FragmentActivity implements ConnectionCallback
           if (wab.getConnectedUser().getDistanceToNearestUser() >= WABApp.MAX_NEAREST_USER_DISTANZ
               || wab.getLocaluser().getMaxSearchRadius() == 0
               || wab.getLocaluser().getUserName().equals("")) {
-            waitinterval = 30000l;
+            waitinterval = WABApp.WATINTERVAL_LONG;
           } else {
-            waitinterval = 6000l;
+            waitinterval = WABApp.WATINTERVAL_SHORT;
           }
 
-          String latitude = String.valueOf(mCurrentLocation.getLatitude());
-          String longitude = String.valueOf(mCurrentLocation.getLongitude());
-          String response;
-          try {
-            response =
-                new HttpAsyncTask().execute("http://1-dot-wab-server.appspot.com/wab_server",
-                    latitude, longitude).get();
-          } catch (Exception e) {
-            System.err.println(e);
-          }
+          sendToServer();
         } else {
           LocationManagerChecker locationManagerChecker =
               new LocationManagerChecker(getApplicationContext());
@@ -288,15 +279,19 @@ public class MainActivity extends FragmentActivity implements ConnectionCallback
       jsonObject.accumulate("longitude", wab.getLocaluser().getLongitude());
       jsonObject.accumulate("userName", wab.getLocaluser().getUserName());
       jsonObject.accumulate("gender", wab.getLocaluser().getGender().toString());
-      jsonObject.accumulate("targetGender", wab.getLocaluser().getGenderLookingFor().toString());
+      jsonObject
+          .accumulate("genderLookingFor", wab.getLocaluser().getGenderLookingFor().toString());
       jsonObject.accumulate("maxSearchRadius", wab.getLocaluser().getMaxSearchRadius());
       jsonObject.accumulate("whitelistedName", wab.getLocaluser().getWhiteListedName());
-
+      jsonObject.accumulate("online", wab.getLocaluser().isOnline());
 
       String json = jsonObject.toString();
       String uri =
           Uri.parse(host).buildUpon().appendQueryParameter("data", json).build().toString();
       URI url = URI.create(uri);
+
+      System.out.println(json);
+
       HttpGet httpGet = new HttpGet(url);
       HttpResponse httpResponse = httpclient.execute(httpGet);
       inputStream = httpResponse.getEntity().getContent();
@@ -328,8 +323,8 @@ public class MainActivity extends FragmentActivity implements ConnectionCallback
                       .setContentTitle("WAB found a member nearby")
                       .setContentText(
                           "Nearest User: " + wab.getConnectedUser().getUserName() + " ["
-                              + (int) wab.getConnectedUser().getDistanceToNearestUser() + "m]["
-                              + wab.getConnectedUser().getGender() + "]");
+                              + wab.getConnectedUser().getDistanceToNearestUser().intValue()
+                              + "m][" + wab.getConnectedUser().getGender() + "]");
               // Builds the notification and issues it.
               mNotifyMgr.notify(mNotificationId, mBuilder.build());
               vibrator.vibrate(1000);
@@ -340,12 +335,12 @@ public class MainActivity extends FragmentActivity implements ConnectionCallback
           @Override
           public void run() {
             tvUser.setText("Nearest User: " + wab.getConnectedUser().getUserName() + " ["
-                + (int) wab.getConnectedUser().getDistanceToNearestUser() + "m]["
+                + wab.getConnectedUser().getDistanceToNearestUser().intValue() + "m]["
                 + wab.getConnectedUser().getGender() + "]");
           }
         });
       } else {
-        result = "Did not work!";
+        result = "Did not work or no user found!";
         runOnUiThread(new Runnable() {
           @Override
           public void run() {
@@ -423,12 +418,12 @@ public class MainActivity extends FragmentActivity implements ConnectionCallback
   @Override
   protected void onStart() {
     super.onStart();
+
   }
 
   @Override
   protected void onStop() {
     super.onStop();
-
   }
 
   @Override
@@ -444,16 +439,37 @@ public class MainActivity extends FragmentActivity implements ConnectionCallback
   @Override
   protected void onRestart() {
     super.onRestart();
+    // wab.getLocaluser().setOnline(true);
+    // sendToServer();
+    // System.out.println("Sent online=true to server");
   }
 
   @Override
   protected void onDestroy() {
-    super.onDestroy();
+    wab.getLocaluser().setOnline(false);
+    sendToServer();
+    System.out.println("Sent online=false to server");
     if (android.os.Build.VERSION.SDK_INT < 17) {
 
     } else {
       LocationServices.FusedLocationApi.removeLocationUpdates(mLocationClient, this);
       mLocationClient.disconnect();
+    }
+    super.onDestroy();
+  }
+
+
+  private void sendToServer() {
+    String latitude = String.valueOf(mCurrentLocation.getLatitude());
+    String longitude = String.valueOf(mCurrentLocation.getLongitude());
+    String response;
+    try {
+      response =
+          new HttpAsyncTask().execute("http://1-dot-wab-server.appspot.com/wab_server", latitude,
+              longitude).get();
+      System.out.println(response);
+    } catch (Exception e) {
+      System.err.println(e);
     }
   }
 
@@ -607,7 +623,7 @@ public class MainActivity extends FragmentActivity implements ConnectionCallback
 
         @Override
         public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-          wab.getLocaluser().setMaxSearchRadius(progress);
+          wab.getLocaluser().setMaxSearchRadius((double) progress);
           tvSearchRadius.setText("Search Radius: " + progress);
         }
       });

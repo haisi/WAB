@@ -71,9 +71,9 @@
                 android:id="@+id/sbMaxDistance"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:contentDescription="Max search distance from 0-2000m"
+                android:contentDescription="Max search distance from 0-20000m"
                 android:indeterminate="false"
-                android:max="2000"
+                android:max="20000"
                 android:progress="100" />
         </LinearLayout>
 

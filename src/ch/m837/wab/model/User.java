@@ -7,11 +7,13 @@ public class User {
   private String userName = "";
   private Gender gender = Gender.Male;
   private Gender genderLookingFor = Gender.Both;
-  private double latitude = 0;
-  private double longitude = 0;
-  private double maxSearchRadius = WABApp.SEARCH_RADIUS;
-  private double distanceToNearestUser = WABApp.MAX_NEAREST_USER_DISTANZ + 1;
+  private Double latitude = 0d;
+  private Double longitude = 0d;
+  private Double maxSearchRadius = WABApp.SEARCH_RADIUS;
+  private Double distanceToNearestUser = WABApp.MAX_NEAREST_USER_DISTANZ + 1;
   private String whiteListedName = "";
+  private Boolean online = true;
+
 
   public String getUserID() {
     return userID;
@@ -45,35 +47,35 @@ public class User {
     this.genderLookingFor = genderLookingFor;
   }
 
-  public double getLatitude() {
+  public Double getLatitude() {
     return latitude;
   }
 
-  public void setLatitude(double latitude) {
+  public void setLatitude(Double latitude) {
     this.latitude = latitude;
   }
 
-  public double getLongitude() {
+  public Double getLongitude() {
     return longitude;
   }
 
-  public void setLongitude(double longitude) {
+  public void setLongitude(Double longitude) {
     this.longitude = longitude;
   }
 
-  public double getMaxSearchRadius() {
+  public Double getMaxSearchRadius() {
     return maxSearchRadius;
   }
 
-  public void setMaxSearchRadius(double maxSearchRadius) {
+  public void setMaxSearchRadius(Double maxSearchRadius) {
     this.maxSearchRadius = maxSearchRadius;
   }
 
-  public double getDistanceToNearestUser() {
+  public Double getDistanceToNearestUser() {
     return distanceToNearestUser;
   }
 
-  public void setDistanceToNearestUser(double distanceToNearestUser) {
+  public void setDistanceToNearestUser(Double distanceToNearestUser) {
     this.distanceToNearestUser = distanceToNearestUser;
   }
 
@@ -83,6 +85,14 @@ public class User {
 
   public void setWhiteListedName(String whiteListedName) {
     this.whiteListedName = whiteListedName;
+  }
+
+  public Boolean isOnline() {
+    return online;
+  }
+
+  public void setOnline(Boolean online) {
+    this.online = online;
   }
 
 }

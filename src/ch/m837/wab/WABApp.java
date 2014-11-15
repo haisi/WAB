@@ -33,10 +33,12 @@ public class WABApp extends Application {
   }
 
   // FIELDS
-  public static final long UPDATE_INTERVAL = 5000;
-  public static final long FASTEST_INTERVAL = 1000;
-  public static final int MAX_NEAREST_USER_DISTANZ = 2500;
-  public static final int SEARCH_RADIUS = 100;
+  public static final long UPDATE_INTERVAL = 5000l;
+  public static final long FASTEST_INTERVAL = 1000l;
+  public static final Double MAX_NEAREST_USER_DISTANZ = 12500d;
+  public static final Double SEARCH_RADIUS = 100d;
+public static final long WATINTERVAL_LONG = 3000l;
+public static final long WATINTERVAL_SHORT = 1000l;
 
 
   private User connectedUser = new User();
