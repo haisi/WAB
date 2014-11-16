@@ -89,11 +89,12 @@ int drawable ic_plusone_medium_off_client 0x7f02001a
 int drawable ic_plusone_small_off_client 0x7f02001b
 int drawable ic_plusone_standard_off_client 0x7f02001c
 int drawable ic_plusone_tall_off_client 0x7f02001d
-int drawable powered_by_google_dark 0x7f02001e
-int drawable powered_by_google_light 0x7f02001f
-int drawable street_view 0x7f020020
+int drawable logo 0x7f02001e
+int drawable powered_by_google_dark 0x7f02001f
+int drawable powered_by_google_light 0x7f020020
+int drawable street_view 0x7f020021
 int id LinearLayout1 0x7f0a0018
-int id action_settings 0x7f0a002b
+int id action_settings 0x7f0a002c
 int id book_now 0x7f0a000e
 int id buyButton 0x7f0a000a
 int id buy_now 0x7f0a000f
@@ -105,6 +106,7 @@ int id grayscale 0x7f0a0012
 int id holo_dark 0x7f0a0005
 int id holo_light 0x7f0a0006
 int id hybrid 0x7f0a0000
+int id login_button 0x7f0a002b
 int id match_parent 0x7f0a000c
 int id maxDistance 0x7f0a001c
 int id monochrome 0x7f0a0013
@@ -141,6 +143,7 @@ int layout activity_main 0x7f030000
 int layout fragment_section_dummy 0x7f030001
 int layout fragment_section_main 0x7f030002
 int layout fragment_section_settings 0x7f030003
+int layout splash 0x7f030004
 int menu main 0x7f090000
 int menu settings 0x7f090001
 int menu wab 0x7f090002

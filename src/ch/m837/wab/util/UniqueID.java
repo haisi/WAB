@@ -1,4 +1,4 @@
-package ch.m837.wab;
+package ch.m837.wab.util;
 
 import java.util.Arrays;
 
